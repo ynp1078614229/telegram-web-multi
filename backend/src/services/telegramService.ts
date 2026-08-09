@@ -267,15 +267,25 @@ class TelegramService {
         let lastMessage = d.lastMessage?.message || '';
         let lastMessageDate = d.lastMessage?.date || 0;
         let lastSenderName = '';
+        let chatType = 'private';
         try {
           const entity = await client.getEntity(d.id);
+          // Detect chat type from entity
+          if (entity) {
+            const e = entity as any;
+            if (e.className === 'Channel') {
+              chatType = e.broadcast ? 'channel' : 'supergroup';
+            } else if (e.className === 'Chat') {
+              chatType = 'group';
+            }
+          }
           const msgs = await client.getMessages(entity, { limit: 1 });
           if (msgs && msgs.length > 0) {
             const m = msgs[0] as any;
             lastMessage = m.message || '';
             lastMessageDate = m.date || 0;
-            // Get sender name for group chats
-            if (d.isGroup || d.isChannel) {
+            // Get sender name for group/supergroup chats
+            if (chatType === 'group' || chatType === 'supergroup') {
               const senderId = m.senderId?.toString?.() || m.fromId?.userId?.toString?.() || '';
               if (senderId) {
                 try {
@@ -286,19 +296,6 @@ class TelegramService {
                   }
                 } catch (e) { /* ignore */ }
               }
-            }
-          }
-        } catch (e) { /* ignore */ }
-        // Detect actual chat type from entity
-        let chatType = 'private';
-        try {
-          const ent = await client.getEntity(d.id);
-          if (ent) {
-            const e = ent as any;
-            if (e.className === 'Channel') {
-              chatType = e.broadcast ? 'channel' : 'supergroup';
-            } else if (e.className === 'Chat') {
-              chatType = 'group';
             }
           }
         } catch (e) { /* ignore */ }
