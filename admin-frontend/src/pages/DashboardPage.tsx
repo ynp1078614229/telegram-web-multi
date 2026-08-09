@@ -198,7 +198,7 @@ export default function DashboardPage() {
               {error && <div className="bg-red-50 border border-red-200 rounded-lg p-2 mb-3 text-red-600 text-sm">{error}</div>}
 
               {/* Mode toggle */}
-              {(step === 'phone' || step === 'qr') && loginMode === 'qr' && (
+              {(step === 'phone' || step === 'qr') && (
                 <>
                   <div className="flex gap-2 mb-4 bg-gray-100 rounded-lg p-1">
                     <button onClick={() => setLoginMode('qr')}
