@@ -58,6 +58,26 @@ db.exec(`
     FOREIGN KEY (rule_id) REFERENCES auto_replies(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS auto_reply_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL,
+    rule_id INTEGER NOT NULL,
+    from_user_id TEXT DEFAULT '',
+    from_user_name TEXT DEFAULT '',
+    keyword TEXT DEFAULT '',
+    reply_text TEXT DEFAULT '',
+    chat_type TEXT DEFAULT 'private',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (rule_id) REFERENCES auto_replies(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS auth_state (
+    account_id INTEGER NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT DEFAULT '',
+    PRIMARY KEY (account_id, key)
+  );
+
   CREATE TABLE IF NOT EXISTS auth_sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     phone TEXT NOT NULL,
@@ -65,6 +85,9 @@ db.exec(`
     account_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE INDEX IF NOT EXISTS idx_auto_reply_logs_account ON auto_reply_logs(account_id);
+  CREATE INDEX IF NOT EXISTS idx_auto_reply_logs_rule ON auto_reply_logs(rule_id);
 `);
 
 // Initialize admin user from env

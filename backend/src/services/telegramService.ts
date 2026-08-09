@@ -384,7 +384,7 @@ class TelegramService {
     r = r.replace(/\{keyword\}/g, ctx.keyword || '');
     r = r.replace(/\{time\}/g, new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
     r = r.replace(/\{date\}/g, new Date().toLocaleDateString('zh-CN'));
-    r = r.replace(/\{weekday\}/g, ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()]);
+    r = r.replace(/\{weekday\}/g, ['周日','周一','周二','周三','周四','周五','周六'][new Date().getDay()]);
     r = r.replace(/\{input\}/g, ctx.text || '');
     r = r.replace(/\{random:([^}]+)\}/g, (_, opts) => {
       const arr = opts.split('|');
@@ -393,70 +393,125 @@ class TelegramService {
     return r;
   }
 
+  // Enhanced match with all match types
+  private matchRuleFull(rule: any, inputText: string): boolean {
+    const keywords = rule.keyword.split(/[,，]/).map((k: string) => k.trim().toLowerCase()).filter(Boolean);
+    const text = inputText.toLowerCase();
+    if (keywords.length === 0) return false;
+    const matchMode = rule.match_mode || 'any';
+    const matchFn = (kw: string) => {
+      switch (rule.match_type) {
+        case 'exact': return text === kw;
+        case 'starts': return text.startsWith(kw);
+        case 'ends': return text.endsWith(kw);
+        case 'regex': try { return new RegExp(kw, 'i').test(text); } catch { return false; }
+        case 'contains': default: return text.includes(kw);
+      }
+    };
+    if (matchMode === 'all') return keywords.every(matchFn);
+    return keywords.some(matchFn);
+  }
+
   async handleIncomingMessage(accountId: number, chatId: string, msg: any): Promise<void> {
     const account = db.prepare('SELECT * FROM accounts WHERE id = ? AND is_active = 1').get(accountId) as any;
     if (!account) return;
+
+    // Check bot global toggle
+    const botRow = db.prepare("SELECT value FROM auth_state WHERE account_id = ? AND key = 'bot_enabled'").get(accountId) as any;
+    if (botRow && Number(botRow.value) !== 1) return;
+
     const rules = db.prepare('SELECT * FROM auto_replies WHERE account_id = ? AND is_active = 1 ORDER BY priority DESC')
       .all(accountId) as any[];
     if (rules.length === 0) return;
     const text = msg.message || msg.text || '';
     if (!text) return;
     const senderId = msg.senderId?.toString?.() || msg.fromId?.userId?.toString?.() || '';
+
+    // Try to get sender name for logging
+    let senderName = '';
+    if (senderId) {
+      try {
+        const client = this.getClient(accountId);
+        if (client) {
+          const senderEntity = await client.getEntity(senderId);
+          if (senderEntity) {
+            const se = senderEntity as any;
+            senderName = se.title || [se.firstName, se.lastName].filter(Boolean).join(' ') || se.username || '';
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
     for (const rule of rules) {
       if (!rule.is_active) continue;
-      const keywords = rule.keyword.split(',').map((k: string) => k.trim()).filter(Boolean);
-      if (keywords.length === 0) continue;
-      let matched = false;
-      if (rule.match_mode === 'all') {
-        matched = keywords.every((kw: string) => {
-          if (rule.match_type === 'regex') { try { return new RegExp(kw).test(text); } catch { return false; } }
-          return text.toLowerCase().includes(kw.toLowerCase());
-        });
-      } else {
-        matched = keywords.some((kw: string) => {
-          if (rule.match_type === 'regex') { try { return new RegExp(kw).test(text); } catch { return false; } }
-          return text.toLowerCase().includes(kw.toLowerCase());
-        });
+      if (!this.matchRuleFull(rule, text)) continue;
+
+      // Scope check
+      const scope = rule.scope || 'all';
+      if (scope !== 'all') {
+        // Determine chat type - for now treat all as 'all' compatible
+        // scope: 'all' matches everything, 'private'/'group' need chat type detection
       }
-      if (!matched) continue;
-      if (rule.scope === 'private' || rule.scope === 'group' || !rule.scope || rule.scope === 'all') {
-        const cooldown = db.prepare('SELECT * FROM auto_reply_cooldowns WHERE rule_id = ? AND chat_id = ?')
-          .get(rule.id, chatId) as any;
-        if (cooldown && rule.cooldown > 0) {
-          const elapsed = (Date.now() - new Date(cooldown.last_triggered_at).getTime()) / 1000;
-          if (elapsed < rule.cooldown) return;
+
+      // Cooldown check
+      const cooldown = db.prepare('SELECT * FROM auto_reply_cooldowns WHERE rule_id = ? AND chat_id = ?')
+        .get(rule.id, chatId) as any;
+      if (cooldown && rule.cooldown > 0) {
+        const elapsed = (Date.now() - new Date(cooldown.last_triggered_at).getTime()) / 1000;
+        if (elapsed < rule.cooldown) continue;
+      }
+
+      // Delay
+      const dMin = rule.delay_min || 0;
+      const dMax = rule.delay_max || 0;
+      let delay = 0;
+      if (dMax > dMin) delay = Math.floor(Math.random() * (dMax - dMin + 1)) + dMin;
+      else if (dMin > 0) delay = dMin;
+      if (delay > 0) await new Promise(r => setTimeout(r, delay * 1000));
+
+      try {
+        const client = this.getClient(accountId);
+        if (!client) return;
+        const entity = await client.getEntity(chatId);
+        const replyText = this.processTemplate(rule.reply_text, { name: senderName, senderId, text, keyword: rule.keyword });
+        await client.sendMessage(entity, { message: replyText });
+
+        // Update match count
+        db.prepare('UPDATE auto_replies SET match_count = match_count + 1 WHERE id = ?').run(rule.id);
+
+        // Update cooldown
+        if (rule.cooldown > 0) {
+          db.prepare('INSERT OR REPLACE INTO auto_reply_cooldowns (rule_id, chat_id, last_triggered_at) VALUES (?, ?, datetime(now))')
+            .run(rule.id, chatId);
         }
-        const delay = rule.delay_min > 0 ? Math.random() * (rule.delay_max - rule.delay_min) + rule.delay_min : 0;
-        if (delay > 0) await new Promise(r => setTimeout(r, delay * 1000));
+
+        // Record log
         try {
-          const client = this.getClient(accountId);
-          if (!client) return;
-          const entity = await client.getEntity(chatId);
-          const replyText = this.processTemplate(rule.reply_text, { senderId, text, keyword: rule.keyword });
-          await client.sendMessage(entity, { message: replyText });
-          db.prepare('UPDATE auto_replies SET match_count = match_count + 1 WHERE id = ?').run(rule.id);
-          if (rule.cooldown > 0) {
-            db.prepare('INSERT OR REPLACE INTO auto_reply_cooldowns (rule_id, chat_id, last_triggered_at) VALUES (?, ?, datetime(now))')
-              .run(rule.id, chatId);
-          }
-          if (this.wss) {
-            this.wss.clients.forEach((ws: any) => {
-              if (ws.readyState === 1) {
-                ws.send(JSON.stringify({
-                  type: 'bot_reply',
-                  accountId,
-                  chatId,
-                  ruleId: rule.id,
-                  reply: replyText,
-                }));
-              }
-            });
-          }
-        } catch (e: any) {
-          console.error('[Bot] Reply error:', e.message);
+          db.prepare(`
+            INSERT INTO auto_reply_logs (account_id, rule_id, from_user_id, from_user_name, keyword, reply_text, chat_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `).run(accountId, rule.id, senderId, senderName, rule.keyword, replyText, 'chat');
+        } catch (logErr) { /* ignore log errors */ }
+
+        // WebSocket broadcast
+        if (this.wss) {
+          this.wss.clients.forEach((ws: any) => {
+            if (ws.readyState === 1) {
+              ws.send(JSON.stringify({
+                type: 'bot_reply',
+                accountId,
+                chatId,
+                ruleId: rule.id,
+                reply: replyText,
+              }));
+            }
+          });
         }
-        return;
+        console.log(`[Bot] Account ${accountId} rule ${rule.id} triggered: "${rule.keyword}" -> "${replyText}"`);
+      } catch (e: any) {
+        console.error('[Bot] Reply error:', e.message);
       }
+      return; // Only match first (highest priority) rule
     }
   }
 

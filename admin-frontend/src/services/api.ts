@@ -47,6 +47,7 @@ export const api = {
   markAsRead: (accountId: number, chatId: string) =>
     request(`/accounts/${accountId}/mark-read`, { method: 'POST', body: JSON.stringify({ chatId }) }),
   
+  // Bot rules
   getRules: (accountId: number) => request(`/bot/rules/${accountId}`),
   createRule: (accountId: number, data: any) =>
     request(`/bot/rules/${accountId}`, { method: 'POST', body: JSON.stringify(data) }),
@@ -56,6 +57,19 @@ export const api = {
     request(`/bot/rules/${ruleId}`, { method: 'DELETE' }),
   copyRules: (fromId: number, toId: number) =>
     request(`/bot/copy-rules/${fromId}/${toId}`, { method: 'POST' }),
+  
+  // Bot status toggle
+  getBotStatus: (accountId: number) => request(`/bot/status/${accountId}`),
+  setBotStatus: (accountId: number, enabled: boolean) =>
+    request(`/bot/status/${accountId}`, { method: 'PUT', body: JSON.stringify({ enabled }) }),
+  
+  // Bot logs
+  getBotLogs: (accountId: number, limit?: number) => request(`/bot/logs/${accountId}?limit=${limit || 200}`),
+  clearBotLogs: (accountId: number) => request(`/bot/logs/${accountId}`, { method: 'DELETE' }),
+  
+  // Bot test match
+  testBotMatch: (accountId: number, text: string) =>
+    request(`/bot/test/${accountId}`, { method: 'POST', body: JSON.stringify({ text }) }),
   
   getStatus: () => request('/status'),
   getHealth: () => request('/health'),
