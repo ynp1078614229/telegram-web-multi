@@ -160,7 +160,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
-                  <span>端口: {acc.client_port}</span>
+                  <span>📱 {acc.phone || '未知号码'}</span>
                   <span>·</span>
                   <span className={acc.is_active ? 'text-green-600' : 'text-red-500'}>
                     {acc.is_active ? '运行中' : '已停用'}

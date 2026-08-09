@@ -225,16 +225,56 @@ class TelegramService {
     const client = this.getClient(accountId);
     if (!client) throw new Error('Account not connected');
     const dialogs = await client.getDialogs({ limit: 50 });
-    return dialogs.map((d: any) => ({
-      id: d.id?.toString?.() || String(d.id),
-      name: d.title || d.name || `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Unknown',
-      lastMessage: d.lastMessage?.message || '',
-      lastMessageDate: d.lastMessage?.date || 0,
-      unreadCount: d.unreadCount || 0,
-      isGroup: d.isGroup || false,
-      isChannel: d.isChannel || false,
-      isUser: d.isUser || false,
-    }));
+    
+    // Fetch last message for each dialog in parallel (batch of 10 to avoid rate limits)
+    const results: any[] = [];
+    const batchSize = 10;
+    for (let i = 0; i < dialogs.length; i += batchSize) {
+      const batch = dialogs.slice(i, i + batchSize);
+      const batchResults = await Promise.all(batch.map(async (d: any) => {
+        let lastMessage = d.lastMessage?.message || '';
+        let lastMessageDate = d.lastMessage?.date || 0;
+        let lastSenderName = '';
+        try {
+          const entity = await client.getEntity(d.id);
+          const msgs = await client.getMessages(entity, { limit: 1 });
+          if (msgs && msgs.length > 0) {
+            const m = msgs[0] as any;
+            lastMessage = m.message || '';
+            lastMessageDate = m.date || 0;
+            // Get sender name for group chats
+            if (d.isGroup || d.isChannel) {
+              const senderId = m.senderId?.toString?.() || m.fromId?.userId?.toString?.() || '';
+              if (senderId) {
+                try {
+                  const sender = await client.getEntity(senderId);
+                  if (sender) {
+                    const se = sender as any;
+                    lastSenderName = se.title || [se.firstName, se.lastName].filter(Boolean).join(' ') || se.username || '';
+                  }
+                } catch (e) { /* ignore */ }
+              }
+            }
+          }
+        } catch (e) { /* ignore */ }
+        return {
+          id: d.id?.toString?.() || String(d.id),
+          name: d.title || d.name || `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Unknown',
+          lastMessage,
+          lastMessageDate,
+          lastSenderName,
+          unreadCount: d.unreadCount || 0,
+          isGroup: d.isGroup || false,
+          isChannel: d.isChannel || false,
+          isUser: d.isUser || false,
+        };
+      }));
+      results.push(...batchResults);
+    }
+    
+    // Sort by lastMessageDate descending
+    results.sort((a, b) => b.lastMessageDate - a.lastMessageDate);
+    return results;
   }
 
   async markAsRead(accountId: number, chatId: string): Promise<boolean> {

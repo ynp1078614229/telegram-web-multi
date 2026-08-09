@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 
-interface Dialog { id: string; name: string; lastMessage: string; lastMessageDate: number; unreadCount: number; isGroup: boolean; isChannel: boolean }
+interface Dialog { id: string; name: string; lastMessage: string; lastMessageDate: number; lastSenderName: string; unreadCount: number; isGroup: boolean; isChannel: boolean }
 interface Message { id: number; chatId: string; text: string; date: number; isOut: boolean; senderId: string; senderName: string }
 interface BotRule { id: number; keyword: string; match_type: string; reply_text: string; is_active: number; match_count: number; priority: number; match_mode: string }
 
@@ -102,7 +102,7 @@ export default function AccountDetailPage() {
           <span className="text-lg">👤</span>
           <div>
             <div className="font-medium text-gray-800 text-sm">{account?.first_name || account?.phone || '加载中'}</div>
-            <div className="text-xs text-gray-500">@{account?.username || ''} · 端口 {account?.client_port}</div>
+            <div className="text-xs text-gray-500">@{account?.username || account?.phone || ''} · 📱 {account?.phone || '未知'}</div>
           </div>
         </div>
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
@@ -126,7 +126,7 @@ export default function AccountDetailPage() {
                       <span className="font-medium text-gray-800 text-sm truncate">{d.name}</span>
                       <span className="text-xs text-gray-400 shrink-0 ml-2">{formatDate(d.lastMessageDate)}</span>
                     </div>
-                    <p className="text-xs text-gray-500 truncate">{d.lastMessage || '暂无消息'}</p>
+                    <p className="text-xs text-gray-500 truncate">{d.lastSenderName ? d.lastSenderName + ': ' : ''}{d.lastMessage || '暂无消息'}</p>
                     {d.unreadCount > 0 && (<span className="inline-block mt-1 bg-blue-500 text-white text-xs rounded-full px-2 py-0.5">{d.unreadCount}</span>)}
                   </div>
                 ))
