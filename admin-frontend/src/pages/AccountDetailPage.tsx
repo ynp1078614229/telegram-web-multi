@@ -338,7 +338,7 @@ export default function AccountDetailPage() {
                 <div className="bg-white border-t border-gray-200 px-4 py-2 shrink-0">
                   <div className="flex items-end gap-2">
                     <textarea ref={fileInputRef as any} value={newMsg} onChange={e => setNewMsg(e.target.value)} onKeyDown={handleKeyDown}
-                      placeholder="输入消息..." rows={1} className="flex-1 resize-none border-none outline-none text-sm py-2 max-h-32 overflow-y-auto" style={{ minHeight: '24px' }} />
+                      placeholder="输入消息..." rows={1} className="flex-1 resize-none border-none outline-none text-sm text-gray-900 py-2 max-h-32 overflow-y-auto" style={{ minHeight: '24px' }} />
                     <button onClick={handleSend} disabled={!newMsg.trim()} className="text-primary hover:text-primary-dark p-2 shrink-0 disabled:opacity-30 transition-opacity">
                       <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
                     </button>
