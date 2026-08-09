@@ -82,6 +82,9 @@ class TelegramService {
     });
     await client.connect();
     const result = await client.sendCode({ apiId: API_ID, apiHash: API_HASH }, phone);
+    // Save session string so verifyCode can reuse the same session
+    const sessionString = (client.session as any).save();
+    db.prepare('UPDATE accounts SET session_string = ? WHERE id = ?').run(sessionString, accountId);
     db.prepare('INSERT INTO auth_sessions (phone, phone_code_hash, account_id) VALUES (?, ?, ?)')
       .run(phone, result.phoneCodeHash, accountId);
     return { phoneCodeHash: result.phoneCodeHash, accountId };
