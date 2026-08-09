@@ -126,8 +126,8 @@ export default function AccountDetailPage() {
   useEffect(() => { if (tab === 'bot') { loadRules(); loadBotStatus() } }, [tab])
   useEffect(() => { if (botSubTab === 'logs') loadLogs() }, [botSubTab])
   useEffect(() => {
-    if (messages.length > 0) requestAnimationFrame(() => msgEndRef.current?.scrollIntoView({ behavior: 'auto' }))
-  }, [messages.length])
+    if (messages.length > 0) setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior: 'auto' }), 50)
+  }, [messages])
 
   const markRead = async (chatId: string) => {
     try {
@@ -137,7 +137,7 @@ export default function AccountDetailPage() {
   }
   const loadAccount = async () => { const accs = await api.getAccounts(); setAccount(accs.find((a: any) => a.id === accountId)) }
   const loadDialogs = async () => { setLoading(true); try { const data = await api.getDialogs(accountId); setDialogs(data) } catch (e) { console.error(e) }; setLoading(false) }
-  const loadMessages = async () => { setMsgLoading(true); setLoadError(false); try { const data = await api.getMessages(accountId, selectedChat!); setMessages(data.reverse()) } catch (e) { console.error(e); setLoadError(true) }; setMsgLoading(false) }
+  const loadMessages = async (silent = false) => { if (!silent) setMsgLoading(true); setLoadError(false); try { const data = await api.getMessages(accountId, selectedChat!); setMessages(data.reverse()) } catch (e) { console.error(e); setLoadError(true) }; setMsgLoading(false) }
   const loadRules = async () => { const data = await api.getRules(accountId); setRules(data) }
   const loadBotStatus = async () => { try { const data = await api.getBotStatus(accountId); setBotEnabled(data.enabled) } catch (e) { /* default true */ } }
   const loadLogs = async () => { setLogsLoading(true); try { const data = await api.getBotLogs(accountId); setLogs(data) } catch (e) { console.error(e) }; setLogsLoading(false) }
@@ -145,7 +145,7 @@ export default function AccountDetailPage() {
   const handleSend = async () => {
     if (!newMsg.trim() || !selectedChat) return
     await api.sendMessage(accountId, selectedChat, newMsg)
-    setNewMsg(''); loadMessages()
+    setNewMsg(''); await loadMessages(true); setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior: 'auto' }), 50)
   }
   const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }
   const handleDeleteMessage = async (msgId: number) => { console.log('Delete message', msgId) }
@@ -321,7 +321,7 @@ export default function AccountDetailPage() {
                   <div className="flex-1 min-w-0"><p className="text-sm font-medium text-gray-800 truncate">{selectedDialog?.name}</p>{(selectedDialog?.isGroup || selectedDialog?.isChannel) && <p className="text-[10px] text-gray-400">{selectedDialog?.isChannel ? '频道' : '群组'}</p>}</div>
                 </div>
                 <div ref={msgContainerRef} className="flex-1 overflow-y-auto px-4 py-3 bg-tg-chat-bg chat-bg">
-                  {msgLoading ? (<div className="flex items-center justify-center h-full"><div className="text-sm text-gray-400">加载中...</div></div>) : loadError ? (<div className="flex flex-col items-center justify-center h-full text-center"><div className="text-3xl mb-2">⚠️</div><p className="text-sm text-red-500 mb-3">加载消息失败</p><button onClick={loadMessages} className="text-xs text-primary hover:underline">重试</button></div>) : groupedMessages.length === 0 ? (<div className="flex items-center justify-center h-full"><p className="text-sm text-gray-400">暂无消息</p></div>) : (
+                  {msgLoading ? (<div className="flex items-center justify-center h-full"><div className="text-sm text-gray-400">加载中...</div></div>) : loadError ? (<div className="flex flex-col items-center justify-center h-full text-center"><div className="text-3xl mb-2">⚠️</div><p className="text-sm text-red-500 mb-3">加载消息失败</p><button onClick={() => loadMessages()} className="text-xs text-primary hover:underline">重试</button></div>) : groupedMessages.length === 0 ? (<div className="flex items-center justify-center h-full"><p className="text-sm text-gray-400">暂无消息</p></div>) : (
                     groupedMessages.map((group, gi) => (
                       <div key={gi}>
                         <div className="flex justify-center my-3"><span className="bg-white/80 text-gray-500 text-[10px] px-2 py-0.5 rounded-full shadow-sm">{group.date}</span></div>
