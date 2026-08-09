@@ -145,7 +145,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {accounts.filter(a => !a.phone?.startsWith('qr_')).map(acc => (
+            {accounts.filter(a => a.telegram_user_id).map(acc => (
               <div key={acc.id}
                 className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition cursor-pointer"
                 onClick={() => navigate(`/account/${acc.id}`)}>

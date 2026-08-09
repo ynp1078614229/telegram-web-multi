@@ -206,8 +206,9 @@ class TelegramService {
           const me = await qrSession.client.getMe();
           const userId = this.convertUserId((me as any).id);
           const sessionString = (qrSession.client.session as any).save();
-          db.prepare(`UPDATE accounts SET telegram_user_id = ?, first_name = ?, username = ?, session_string = ?, is_active = 1 WHERE id = ?`)
-            .run(userId, (me as any).firstName || '', (me as any).username || '', sessionString, qrSession.accountId);
+          const displayName = (me as any).username || String(userId);
+            db.prepare(`UPDATE accounts SET telegram_user_id = ?, first_name = ?, username = ?, phone = ?, session_string = ?, is_active = 1 WHERE id = ?`)
+            .run(userId, (me as any).firstName || '', (me as any).username || '', displayName, sessionString, qrSession.accountId);
           this.qrSessions.delete(sessionId);
           await this.connectAccount({ ...db.prepare('SELECT * FROM accounts WHERE id = ?').get(qrSession.accountId) as any, session_string: sessionString, telegram_user_id: userId });
           console.log('[QR] Account saved and connected, id:', qrSession.accountId);
@@ -233,8 +234,9 @@ class TelegramService {
             const me = await qrSession.client.getMe();
             const userId = this.convertUserId((me as any).id);
             const sessionString = (qrSession.client.session as any).save();
-            db.prepare(`UPDATE accounts SET telegram_user_id = ?, first_name = ?, username = ?, session_string = ?, is_active = 1 WHERE id = ?`)
-              .run(userId, (me as any).firstName || '', (me as any).username || '', sessionString, qrSession.accountId);
+            const displayName = (me as any).username || String(userId);
+            db.prepare(`UPDATE accounts SET telegram_user_id = ?, first_name = ?, username = ?, phone = ?, session_string = ?, is_active = 1 WHERE id = ?`)
+              .run(userId, (me as any).firstName || '', (me as any).username || '', displayName, sessionString, qrSession.accountId);
             this.qrSessions.delete(sessionId);
             await this.connectAccount({ ...db.prepare('SELECT * FROM accounts WHERE id = ?').get(qrSession.accountId) as any, session_string: sessionString, telegram_user_id: userId });
             return { status: 'success', accountId: qrSession.accountId };
