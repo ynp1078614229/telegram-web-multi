@@ -120,6 +120,17 @@ export default function AccountDetailPage() {
   }, [])
 
   useEffect(() => { loadAccount(); loadDialogs() }, [accountId])
+
+  // Poll dialog list every 10 seconds for new messages & unread updates
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const data = await api.getDialogs(accountId);
+        setDialogs(data);
+      } catch (e) { /* silent */ }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [accountId])
   useEffect(() => {
     if (selectedChat) { loadMessages(); markRead(selectedChat) }
   }, [selectedChat])
