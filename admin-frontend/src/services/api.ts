@@ -71,6 +71,18 @@ export const api = {
   testBotMatch: (accountId: number, text: string) =>
     request(`/bot/test/${accountId}`, { method: 'POST', body: JSON.stringify({ text }) }),
   
+  // Global Bot management
+  getGlobalBotStatus: () => request('/bot/global/status'),
+  setGlobalBotStatus: (enabled: boolean) =>
+    request('/bot/global/status', { method: 'PUT', body: JSON.stringify({ enabled }) }),
+  getGlobalRules: () => request('/bot/global/rules'),
+  createGlobalRule: (data: any) =>
+    request('/bot/global/rules', { method: 'POST', body: JSON.stringify(data) }),
+  getGlobalBotLogs: (limit?: number) => request(`/bot/global/logs?limit=${limit || 200}`),
+  clearGlobalBotLogs: () => request('/bot/global/logs', { method: 'DELETE' }),
+  testGlobalMatch: (text: string) =>
+    request('/bot/global/test', { method: 'POST', body: JSON.stringify({ text }) }),
+
   getStatus: () => request('/status'),
   getHealth: () => request('/health'),
 };

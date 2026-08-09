@@ -122,6 +122,10 @@ export default function DashboardPage() {
           <h1 className="text-xl font-bold text-gray-800">Telegram 多账号管理后台</h1>
         </div>
         <div className="flex items-center gap-4">
+          <button onClick={() => navigate('/bot')}
+            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
+            🤖 Bot管理
+          </button>
           <button onClick={() => { resetModal(); setShowAddModal(true) }}
             className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
             + 添加账号

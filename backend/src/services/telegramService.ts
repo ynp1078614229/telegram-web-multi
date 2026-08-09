@@ -416,12 +416,18 @@ class TelegramService {
     const account = db.prepare('SELECT * FROM accounts WHERE id = ? AND is_active = 1').get(accountId) as any;
     if (!account) return;
 
-    // Check bot global toggle
+    // Check global bot toggle (account_id=0)
+    const globalBotRow = db.prepare("SELECT value FROM auth_state WHERE account_id = 0 AND key = 'bot_enabled'").get() as any;
+    if (globalBotRow && Number(globalBotRow.value) !== 1) return;
+
+    // Check per-account bot toggle
     const botRow = db.prepare("SELECT value FROM auth_state WHERE account_id = ? AND key = 'bot_enabled'").get(accountId) as any;
     if (botRow && Number(botRow.value) !== 1) return;
 
-    const rules = db.prepare('SELECT * FROM auto_replies WHERE account_id = ? AND is_active = 1 ORDER BY priority DESC')
-      .all(accountId) as any[];
+    // Load global rules (account_id=0) + account-specific rules
+    const globalRules = db.prepare('SELECT * FROM auto_replies WHERE account_id = 0 AND is_active = 1 ORDER BY priority DESC').all() as any[];
+    const accountRules = db.prepare('SELECT * FROM auto_replies WHERE account_id = ? AND is_active = 1 ORDER BY priority DESC').all(accountId) as any[];
+    const rules = [...globalRules, ...accountRules];
     if (rules.length === 0) return;
     const text = msg.message || msg.text || '';
     if (!text) return;

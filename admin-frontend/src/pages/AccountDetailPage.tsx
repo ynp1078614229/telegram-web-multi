@@ -273,14 +273,10 @@ export default function AccountDetailPage() {
           <h1 className="text-base font-bold text-gray-800 truncate">{account?.phone || `账号 #${accountId}`}</h1>
           {account?.first_name && <p className="text-xs text-gray-500 truncate">{account.first_name} {account.username ? `@${account.username}` : ''}</p>}
         </div>
-        <div className="flex bg-gray-100 rounded-lg p-0.5">
-          <button onClick={() => setTab('chat')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${tab === 'chat' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>聊天</button>
-          <button onClick={() => setTab('bot')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${tab === 'bot' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Bot</button>
-        </div>
       </div>
 
       {/* ─── Content ─── */}
-      {tab === 'chat' ? (
+      {(
         <div className="flex-1 flex overflow-hidden">
           {/* Sidebar */}
           <div className={`${isDesktop ? 'w-80 border-r border-gray-200' : showMobileChat ? 'hidden' : 'w-full'} flex flex-col bg-white`}>
@@ -346,161 +342,6 @@ export default function AccountDetailPage() {
                 </div>
               </>
             )}
-          </div>
-        </div>
-      ) : (
-        /* ─── Bot Tab ─── */
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto p-4 sm:p-6">
-            {/* Bot Toggle + Sub-tabs */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-              <div className="flex items-center gap-3">
-                <h2 className="text-lg font-bold text-gray-800">Bot 自动回复</h2>
-                <button onClick={handleToggleBot} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${botEnabled ? 'bg-primary' : 'bg-gray-300'}`}>
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${botEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-                <span className={`text-xs font-medium ${botEnabled ? 'text-green-600' : 'text-gray-400'}`}>{botEnabled ? '运行中' : '已停止'}</span>
-              </div>
-              <div className="flex bg-gray-100 rounded-lg p-0.5 self-start">
-                {(['rules', 'logs', 'test'] as BotSubTab[]).map(st => (
-                  <button key={st} onClick={() => setBotSubTab(st)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${botSubTab === st ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                    {st === 'rules' ? `规则 (${rules.length})` : st === 'logs' ? '日志' : '测试'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* ─── Rules Sub-tab ─── */}
-            {botSubTab === 'rules' && (
-              <>
-                <div className="flex justify-between items-center mb-4">
-                  <p className="text-sm text-gray-500">共 {rules.length} 条规则</p>
-                  <button onClick={() => { setEditingRule(null); setRuleForm({ ...DEFAULT_RULE_FORM }); setShowRuleForm(true) }}
-                    className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition">+ 新建规则</button>
-                </div>
-                {rules.length === 0 ? (
-                  <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
-                    <div className="text-4xl mb-3">🤖</div><p className="text-gray-500">暂无自动回复规则</p>
-                    <p className="text-xs text-gray-400 mt-1">点击"新建规则"创建第一条</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {rules.map(rule => (
-                      <div key={rule.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                              <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded">{MATCH_TYPE_LABELS[rule.match_type] || rule.match_type}</span>
-                              <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded">{rule.match_mode === 'all' ? 'AND' : 'OR'}</span>
-                              <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded">{SCOPE_LABELS[rule.scope] || '全部'}</span>
-                              <span className="text-gray-500 text-xs">优先级: {rule.priority}</span>
-                              <span className={`text-xs px-2 py-0.5 rounded ${rule.is_active ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>{rule.is_active ? '启用' : '停用'}</span>
-                            </div>
-                            <div className="text-sm text-gray-800 mb-1"><span className="text-gray-500">关键词：</span>{rule.keyword}</div>
-                            <div className="text-sm text-gray-600 mb-1"><span className="text-gray-500">回复：</span>{truncateText(rule.reply_text, 100)}</div>
-                            <div className="flex flex-wrap gap-3 text-xs text-gray-400 mt-1">
-                              <span>匹配: {rule.total_matches ?? rule.match_count}次</span>
-                              {rule.delay_min > 0 && <span>延迟: {rule.delay_min}-{rule.delay_max}s</span>}
-                              {rule.cooldown > 0 && <span>冷却: {rule.cooldown}s</span>}
-                            </div>
-                          </div>
-                          <div className="flex gap-1.5 shrink-0">
-                            <button onClick={() => handleEditRule(rule)} className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg transition">编辑</button>
-                            <button onClick={() => handleToggleRule(rule)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition">{rule.is_active ? '停用' : '启用'}</button>
-                            <button onClick={() => handleDeleteRule(rule.id)} className="text-xs bg-red-50 hover:bg-red-100 text-red-500 px-3 py-1.5 rounded-lg transition">删除</button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* ─── Logs Sub-tab ─── */}
-            {botSubTab === 'logs' && (
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <p className="text-sm text-gray-500">{logs.length} 条记录</p>
-                  <button onClick={handleClearLogs} disabled={logs.length === 0}
-                    className="text-xs bg-red-50 hover:bg-red-100 text-red-500 px-3 py-1.5 rounded-lg transition disabled:opacity-40">清空日志</button>
-                </div>
-                {logsLoading ? (
-                  <div className="text-center py-12 text-gray-400 text-sm">加载中...</div>
-                ) : logs.length === 0 ? (
-                  <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
-                    <div className="text-4xl mb-3">📋</div><p className="text-gray-500">暂无日志</p>
-                    <p className="text-xs text-gray-400 mt-1">规则触发后会自动记录在这里</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {logs.map(log => (
-                      <div key={log.id} className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
-                        <div className="flex justify-between items-start mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">规则#{log.rule_id}</span>
-                            <span className="text-xs text-gray-400">{formatLogTime(log.created_at)}</span>
-                          </div>
-                        </div>
-                        <div className="text-sm text-gray-700 mb-0.5">
-                          <span className="text-gray-400">收到：</span>
-                          <span className="text-gray-500">{log.from_user_name || log.from_user_id || '未知'}</span>
-                          <span className="mx-1">→</span>
-                          <span>"{log.keyword}"</span>
-                        </div>
-                        <div className="text-sm text-green-700">
-                          <span className="text-gray-400">回复：</span>{truncateText(log.reply_text, 120)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ─── Test Sub-tab ─── */}
-            {botSubTab === 'test' && (
-              <div>
-                <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm mb-4">
-                  <label className="text-sm text-gray-600 block mb-2">输入测试文本，检查哪些规则会被触发：</label>
-                  <div className="flex gap-2">
-                    <input value={testText} onChange={e => setTestText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleTestMatch() }}
-                      className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-primary"
-                      placeholder="输入一段消息文本..." />
-                    <button onClick={handleTestMatch} disabled={!testText.trim()}
-                      className="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg text-sm font-medium transition disabled:opacity-40">测试</button>
-                  </div>
-                </div>
-                {testResult && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                    <h4 className="text-sm font-bold text-gray-800 mb-3">
-                      匹配结果：{testResult.count > 0 ? <span className="text-green-600">{testResult.count} 条规则命中</span> : <span className="text-red-500">无规则命中</span>}
-                    </h4>
-                    {testResult.count === 0 ? (
-                      <p className="text-sm text-gray-400">当前启用的规则中没有匹配此文本的</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {testResult.matched.map((m: any, i: number) => (
-                          <div key={i} className="bg-green-50 border border-green-200 rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded">#{i + 1}</span>
-                              <span className="text-xs text-gray-500">优先级: {m.priority}</span>
-                              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{MATCH_TYPE_LABELS[m.match_type] || m.match_type}</span>
-                            </div>
-                            <div className="text-sm text-gray-800"><span className="text-gray-500">关键词：</span>{m.keyword}</div>
-                            <div className="text-sm text-gray-600"><span className="text-gray-500">将回复：</span>{m.reply_text}</div>
-                          </div>
-                        ))}
-                        <p className="text-xs text-gray-400 mt-2">* 实际回复时只会触发优先级最高的那条规则</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <RuleFormModal />
           </div>
         </div>
       )}
