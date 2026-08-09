@@ -5,7 +5,7 @@ import AccountDetailPage from './pages/AccountDetailPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('admin_token')
-  return token ? <>{children}</> : <Navigate to="/admin/login" />
+  return token ? <>{children}</> : <Navigate to="/login" replace />
 }
 
 export default function App() {

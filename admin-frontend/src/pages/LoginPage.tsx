@@ -27,38 +27,38 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">📱</div>
-          <h1 className="text-2xl font-bold text-white">Telegram 多账号管理</h1>
-          <p className="text-dark-400 mt-1">Admin Panel</p>
+          <h1 className="text-2xl font-bold text-gray-800">Telegram 多账号管理</h1>
+          <p className="text-gray-500 mt-1">Admin Panel</p>
         </div>
-        <form onSubmit={handleLogin} className="bg-dark-800 rounded-2xl p-8 shadow-xl border border-dark-700">
+        <form onSubmit={handleLogin} className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
           {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4 text-red-400 text-sm">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-red-600 text-sm">
               {error}
             </div>
           )}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-dark-300 mb-1.5">管理员账号</label>
+              <label className="block text-sm text-gray-600 mb-1.5">管理员账号</label>
               <input
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                className="w-full bg-dark-900 border border-dark-600 rounded-lg px-4 py-3 text-white placeholder-dark-500 focus:outline-none focus:border-primary transition"
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
                 placeholder="请输入管理员账号"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm text-dark-300 mb-1.5">密码</label>
+              <label className="block text-sm text-gray-600 mb-1.5">密码</label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full bg-dark-900 border border-dark-600 rounded-lg px-4 py-3 text-white placeholder-dark-500 focus:outline-none focus:border-primary transition"
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
                 placeholder="请输入密码"
                 required
               />
@@ -66,7 +66,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary hover:bg-blue-600 disabled:opacity-50 text-white font-medium py-3 rounded-lg transition mt-2"
+              className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-medium py-3 rounded-lg transition mt-2"
             >
               {loading ? '登录中...' : '登 录'}
             </button>

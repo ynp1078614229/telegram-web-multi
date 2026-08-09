@@ -35,11 +35,17 @@ export const api = {
   toggleAccount: (id: number) =>
     request(`/accounts/${id}/toggle`, { method: 'PATCH' }),
   
+  // QR Login
+  startQRLogin: () => request('/accounts/qr/start', { method: 'POST' }),
+  checkQRStatus: (sessionId: string) => request(`/accounts/qr/check/${sessionId}`),
+  
   getDialogs: (accountId: number) => request(`/accounts/${accountId}/dialogs`),
   getMessages: (accountId: number, chatId: string, limit?: number) =>
     request(`/accounts/${accountId}/messages?chatId=${chatId}&limit=${limit || 50}`),
   sendMessage: (accountId: number, chatId: string, text: string, replyToMsgId?: number) =>
     request(`/accounts/${accountId}/send`, { method: 'POST', body: JSON.stringify({ chatId, text, replyToMsgId }) }),
+  markAsRead: (accountId: number, chatId: string) =>
+    request(`/accounts/${accountId}/mark-read`, { method: 'POST', body: JSON.stringify({ chatId }) }),
   
   getRules: (accountId: number) => request(`/bot/rules/${accountId}`),
   createRule: (accountId: number, data: any) =>

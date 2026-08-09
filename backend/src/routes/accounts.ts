@@ -16,7 +16,7 @@ router.get('/', adminAuth, (req: AdminRequest, res: Response) => {
   res.json(accounts);
 });
 
-// Add new account (start login)
+// Add new account (start phone login)
 router.post('/login', adminAuth, async (req: AdminRequest, res: Response) => {
   try {
     const { phone } = req.body;
@@ -44,6 +44,26 @@ router.post('/verify-2fa', adminAuth, async (req: AdminRequest, res: Response) =
   try {
     const { phone, password, phoneCodeHash } = req.body;
     const result = await telegramService.verify2FA(phone, password, phoneCodeHash);
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// QR Login - Start
+router.post('/qr/start', adminAuth, async (req: AdminRequest, res: Response) => {
+  try {
+    const result = await telegramService.startQRLogin();
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// QR Login - Check status
+router.get('/qr/check/:sessionId', adminAuth, async (req: AdminRequest, res: Response) => {
+  try {
+    const result = await telegramService.checkQRStatus(req.params.sessionId);
     res.json(result);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -81,6 +101,18 @@ router.get('/:id/dialogs', adminAuth, async (req: AdminRequest, res: Response) =
   try {
     const dialogs = await telegramService.getDialogs(parseInt(req.params.id));
     res.json(dialogs);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Mark messages as read
+router.post('/:id/mark-read', adminAuth, async (req: AdminRequest, res: Response) => {
+  try {
+    const { chatId } = req.body;
+    if (!chatId) return res.status(400).json({ error: 'chatId required' });
+    const result = await telegramService.markAsRead(parseInt(req.params.id), chatId);
+    res.json({ success: result });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

@@ -11,7 +11,7 @@ import db from './db/database';
 import authRoutes from './routes/auth';
 import accountRoutes from './routes/accounts';
 import botRoutes from './routes/bot';
-import { telegramService } from './services/telegramService';
+import telegramService from './services/telegramService';
 
 const ADMIN_PORT = parseInt(process.env.MULTI_PORT || "3002");
 const CLIENT_START_PORT = parseInt(process.env.CLIENT_START_PORT || '3001');
