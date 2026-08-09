@@ -289,6 +289,20 @@ class TelegramService {
             }
           }
         } catch (e) { /* ignore */ }
+        // Detect actual chat type from entity
+        let chatType = 'private';
+        try {
+          const ent = await client.getEntity(d.id);
+          if (ent) {
+            const e = ent as any;
+            if (e.className === 'Channel') {
+              chatType = e.broadcast ? 'channel' : 'supergroup';
+            } else if (e.className === 'Chat') {
+              chatType = 'group';
+            }
+          }
+        } catch (e) { /* ignore */ }
+
         return {
           id: d.id?.toString?.() || String(d.id),
           name: d.title || d.name || `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Unknown',
@@ -299,6 +313,7 @@ class TelegramService {
           isGroup: d.isGroup || false,
           isChannel: d.isChannel || false,
           isUser: d.isUser || false,
+          chatType,
         };
       }));
       results.push(...batchResults);

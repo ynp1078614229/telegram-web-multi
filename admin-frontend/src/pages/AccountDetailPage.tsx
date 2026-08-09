@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 
 // ─── Types ───
-interface Dialog { id: string; name: string; lastMessage: string; lastMessageDate: number; lastSenderName: string; unreadCount: number; isGroup: boolean; isChannel: boolean }
+interface Dialog { id: string; name: string; lastMessage: string; lastMessageDate: number; lastSenderName: string; unreadCount: number; isGroup: boolean; isChannel: boolean; chatType?: string }
 interface Message { id: number; chatId: string; text: string; date: number; isOut: boolean; senderId: string; senderName: string; type?: string; mediaUrl?: string; fileName?: string; isRead?: boolean }
 interface BotRule { id: number; keyword: string; match_type: string; reply_text: string; is_active: number; match_count: number; total_matches?: number; priority: number; match_mode: string; delay_min: number; delay_max: number; cooldown: number; scope: string }
 interface BotLog { id: number; rule_id: number; from_user_id: string; from_user_name: string; keyword: string; reply_text: string; chat_type: string; rule_keyword?: string; created_at: string }
@@ -329,14 +329,14 @@ export default function AccountDetailPage() {
                 <div className="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center gap-3 shrink-0">
                   {!isDesktop && <button onClick={handleBack} className="text-gray-500 hover:text-gray-700 p-1"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg></button>}
                   <Avatar name={selectedDialog?.name || ''} size={36} />
-                  <div className="flex-1 min-w-0"><p className="text-sm font-medium text-gray-800 truncate">{selectedDialog?.name}</p>{(selectedDialog?.isGroup || selectedDialog?.isChannel) && <p className="text-[10px] text-gray-400">{selectedDialog?.isChannel ? '频道' : '群组'}</p>}</div>
+                  <div className="flex-1 min-w-0"><p className="text-sm font-medium text-gray-800 truncate">{selectedDialog?.name}</p>{selectedDialog?.chatType && selectedDialog.chatType !== 'private' && <p className="text-[10px] text-gray-400">{selectedDialog.chatType === 'channel' ? '频道' : selectedDialog.chatType === 'supergroup' ? '超级群组' : '群组'}</p>}</div>
                 </div>
                 <div ref={msgContainerRef} className="flex-1 overflow-y-auto px-4 py-3 bg-tg-chat-bg chat-bg">
                   {msgLoading ? (<div className="flex items-center justify-center h-full"><div className="text-sm text-gray-400">加载中...</div></div>) : loadError ? (<div className="flex flex-col items-center justify-center h-full text-center"><div className="text-3xl mb-2">⚠️</div><p className="text-sm text-red-500 mb-3">加载消息失败</p><button onClick={() => loadMessages()} className="text-xs text-primary hover:underline">重试</button></div>) : groupedMessages.length === 0 ? (<div className="flex items-center justify-center h-full"><p className="text-sm text-gray-400">暂无消息</p></div>) : (
                     groupedMessages.map((group, gi) => (
                       <div key={gi}>
                         <div className="flex justify-center my-3"><span className="bg-white/80 text-gray-500 text-[10px] px-2 py-0.5 rounded-full shadow-sm">{group.date}</span></div>
-                        {group.messages.map(msg => (<MessageBubble key={msg.id} message={msg} chatType={selectedDialog?.isGroup ? 'group' : 'private'} showSender={!!selectedDialog?.isGroup} onDelete={handleDeleteMessage} />))}
+                        {group.messages.map(msg => (<MessageBubble key={msg.id} message={msg} chatType={selectedDialog?.chatType === 'group' || selectedDialog?.chatType === 'supergroup' ? 'group' : 'private'} showSender={selectedDialog?.chatType === 'group' || selectedDialog?.chatType === 'supergroup'} onDelete={handleDeleteMessage} />))}
                       </div>
                     ))
                   )}
