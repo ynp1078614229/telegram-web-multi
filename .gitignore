@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+*.db
+*.db-journal
+admin-frontend/node_modules/
+admin-frontend/dist/
+backend/data.db*
+backend/sessions/

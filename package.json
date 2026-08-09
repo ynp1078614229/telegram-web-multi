@@ -1,0 +1,10 @@
+{
+  "name": "telegram-web-multi",
+  "version": "1.0.0",
+  "scripts": {
+    "build:backend": "tsc -p backend/tsconfig.json",
+    "build:admin": "cd admin-frontend && pnpm run build",
+    "build": "npm run build:backend && npm run build:admin",
+    "start": "node backend/dist/server.js"
+  }
+}
