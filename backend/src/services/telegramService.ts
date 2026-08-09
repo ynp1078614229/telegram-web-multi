@@ -312,9 +312,22 @@ class TelegramService {
     if (!client) throw new Error('Account not connected');
     try {
       const entity = await client.getEntity(chatId);
-      await client.invoke(new Api.messages.ReadHistory({ peer: entity }));
+      const entityAny = entity as any;
+      // Get latest message id for accurate max_id
+      let maxId = 0;
+      try {
+        const msgs = await client.getMessages(entity, { limit: 1 });
+        if (msgs && msgs.length > 0) maxId = (msgs[0] as any).id || 0;
+      } catch (e) { /* fallback to 0 */ }
+      // Channel / Supergroup → channels.ReadHistory; Private/Group → messages.ReadHistory
+      if (entityAny?.className === 'Channel' || entityAny?.megagroup || entityAny?.broadcast) {
+        await client.invoke(new Api.channels.ReadHistory({ channel: entity, maxId }));
+      } else {
+        await client.invoke(new Api.messages.ReadHistory({ peer: entity, maxId }));
+      }
       return true;
     } catch (e) {
+      console.error('[markAsRead] error for chatId=' + chatId, e);
       return false;
     }
   }
