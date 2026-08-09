@@ -164,13 +164,18 @@ class TelegramService {
     let token = '';
     for (let i = 0; i < 32; i++) token += chars[Math.floor(Math.random() * chars.length)];
     db.prepare('UPDATE accounts SET client_token = ? WHERE id = ?').run(token, accountId);
+    // Use WSS for QR login - needed to receive scan notifications
     const sessionObj = new StringSession('');
     const client = new TelegramClient(sessionObj, API_ID, API_HASH, {
-      connectionRetries: 3,
-      useWSS: false,
+      connectionRetries: 5,
+      useWSS: true,
     });
     await client.connect();
-    const result = await client.invoke(new Api.auth.ExportLoginToken({ apiId: API_ID, apiHash: API_HASH, exceptIds: [] }));
+    console.log('[QR] Client connected, exporting login token...');
+    const result = await client.invoke(
+      new Api.auth.ExportLoginToken({ apiId: API_ID, apiHash: API_HASH, exceptIds: [] })
+    );
+    console.log('[QR] ExportLoginToken result:', (result as any).className);
     let tokenBuf: Buffer;
     if (result instanceof Api.auth.LoginToken) {
       tokenBuf = (result as any).token;
@@ -178,8 +183,11 @@ class TelegramService {
       tokenBuf = (result as any).token || Buffer.alloc(0);
     }
     const qrUrl = `tg://login?token=${tokenBuf.toString('base64url')}`;
-    const qrSvg = await QRCode.toString(qrUrl, { type: 'svg', width: 300, margin: 1, color: { dark: '#3b82f6', light: '#ffffff' } });
+    // Generate QR code using external API (more reliable than SVG)
+    const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}`;
+    const qrSvg = `<div style="text-align:center"><img src="${qrImage}" alt="QR Code" style="width:200px;height:200px;border-radius:8px" /></div>`;
     this.qrSessions.set(sessionId, { client, accountId, token: tokenBuf });
+    console.log('[QR] Session started, sessionId:', sessionId);
     return { sessionId, qrUrl, qrSvg };
   }
 
@@ -190,21 +198,11 @@ class TelegramService {
       const result = await qrSession.client.invoke(
         new Api.auth.ExportLoginToken({ apiId: API_ID, apiHash: API_HASH, exceptIds: [] })
       );
+      console.log('[QR] Check result:', (result as any).className);
+
       if (result instanceof Api.auth.LoginTokenSuccess) {
-        const authorization = (result as any).authorization;
-        const me = await qrSession.client.getMe();
-        const userId = this.convertUserId((me as any).id);
-        const sessionString = (qrSession.client.session as any).save();
-        db.prepare(`UPDATE accounts SET telegram_user_id = ?, first_name = ?, username = ?, session_string = ?, is_active = 1 WHERE id = ?`)
-          .run(userId, (me as any).firstName || '', (me as any).username || '', sessionString, qrSession.accountId);
-        this.qrSessions.delete(sessionId);
-        await this.connectAccount({ ...db.prepare('SELECT * FROM accounts WHERE id = ?').get(qrSession.accountId) as any, session_string: sessionString, telegram_user_id: userId });
-        return { status: 'success', accountId: qrSession.accountId };
-      } else if (result instanceof Api.auth.LoginTokenMigrateTo) {
-        const migrated = await qrSession.client.invoke(
-          new Api.auth.ImportLoginToken({ token: (result as any).token })
-        );
-        if (migrated instanceof Api.auth.LoginTokenSuccess) {
+        if (result.authorization instanceof Api.auth.Authorization) {
+          console.log('[QR] Login success!');
           const me = await qrSession.client.getMe();
           const userId = this.convertUserId((me as any).id);
           const sessionString = (qrSession.client.session as any).save();
@@ -212,11 +210,43 @@ class TelegramService {
             .run(userId, (me as any).firstName || '', (me as any).username || '', sessionString, qrSession.accountId);
           this.qrSessions.delete(sessionId);
           await this.connectAccount({ ...db.prepare('SELECT * FROM accounts WHERE id = ?').get(qrSession.accountId) as any, session_string: sessionString, telegram_user_id: userId });
+          console.log('[QR] Account saved and connected, id:', qrSession.accountId);
           return { status: 'success', accountId: qrSession.accountId };
         }
+        console.log('[QR] LoginTokenSuccess but unexpected auth type:', (result.authorization as any)?.className);
+        return { status: 'error', error: 'Unexpected authorization type' };
+      } else if (result instanceof Api.auth.LoginToken) {
+        console.log('[QR] Still waiting for scan...');
+        return { status: 'waiting' };
+      } else if (result instanceof Api.auth.LoginTokenMigrateTo) {
+        console.log('[QR] Needs DC migration to DC', (result as any).dcId);
+        // Switch to the target DC
+        await (qrSession.client as any)._switchDC((result as any).dcId);
+        console.log('[QR] Switched DC, importing token...');
+        const importResult = await qrSession.client.invoke(
+          new Api.auth.ImportLoginToken({ token: (result as any).token })
+        );
+        console.log('[QR] ImportLoginToken result:', (importResult as any).className);
+        if (importResult instanceof Api.auth.LoginTokenSuccess) {
+          if (importResult.authorization instanceof Api.auth.Authorization) {
+            console.log('[QR] Login success after DC migration!');
+            const me = await qrSession.client.getMe();
+            const userId = this.convertUserId((me as any).id);
+            const sessionString = (qrSession.client.session as any).save();
+            db.prepare(`UPDATE accounts SET telegram_user_id = ?, first_name = ?, username = ?, session_string = ?, is_active = 1 WHERE id = ?`)
+              .run(userId, (me as any).firstName || '', (me as any).username || '', sessionString, qrSession.accountId);
+            this.qrSessions.delete(sessionId);
+            await this.connectAccount({ ...db.prepare('SELECT * FROM accounts WHERE id = ?').get(qrSession.accountId) as any, session_string: sessionString, telegram_user_id: userId });
+            return { status: 'success', accountId: qrSession.accountId };
+          }
+        }
+        console.log('[QR] ImportLoginToken unexpected result');
+        return { status: 'error', error: 'DC migration failed' };
       }
+      console.log('[QR] Unexpected result type:', (result as any).className);
       return { status: 'waiting' };
     } catch (e: any) {
+      console.log('[QR] Check error:', e.errorMessage || e.message);
       return { status: 'error', error: e.message };
     }
   }
