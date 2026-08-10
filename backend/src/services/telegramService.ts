@@ -442,6 +442,7 @@ class TelegramService {
   }
 
   async handleIncomingMessage(accountId: number, chatId: string, msg: any): Promise<void> {
+    console.log(`[BotDebug] handleIncomingMessage called: account=${accountId}, chat=${chatId}, text=${(msg.message || '').substring(0, 50)}`);
     const account = db.prepare('SELECT * FROM accounts WHERE id = ? AND is_active = 1').get(accountId) as any;
     if (!account) return;
 
@@ -605,15 +606,17 @@ class TelegramService {
   }
 
   async setupMessageHandler(client: TelegramClient, accountId: number) {
-    client.addEventHandler(async (update: any) => {
-      if (update.className === 'UpdateNewMessage' || update.className === 'NewMessage') {
-        const msg = update.message;
-        if (!msg || msg.out) return;
-        const chatId = msg.peerId?.chatId?.toString?.() || msg.peerId?.userId?.toString?.() || '';
-        if (chatId) {
-          await this.handleIncomingMessage(accountId, chatId, msg);
-          this.broadcastMessage(accountId, chatId, msg);
-        }
+    console.log(`[BotDebug] Setting up message handler for account ${accountId}`);
+    client.addEventHandler(async (event: any) => {
+      // When using NewMessage event builder, the callback receives a NewMessage event object
+      // which has a .message property - NOT a className property
+      const msg = event.message;
+      if (!msg || msg.out) return; // Skip outgoing messages
+      console.log(`[BotDebug] New message event for account ${accountId}: text="${(msg.message || '').substring(0, 50)}"`);
+      const chatId = msg.peerId?.channelId?.toString?.() || msg.peerId?.chatId?.toString?.() || msg.peerId?.userId?.toString?.() || '';
+      if (chatId) {
+        await this.handleIncomingMessage(accountId, chatId, msg);
+        this.broadcastMessage(accountId, chatId, msg);
       }
     }, new NewMessage({}));
   }
