@@ -46,8 +46,7 @@ db.exec(`
     cooldown INTEGER DEFAULT 0,
     scope TEXT DEFAULT 'all',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE TABLE IF NOT EXISTS auto_reply_cooldowns (
