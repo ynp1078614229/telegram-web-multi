@@ -442,7 +442,6 @@ class TelegramService {
   }
 
   async handleIncomingMessage(accountId: number, chatId: string, msg: any): Promise<void> {
-    console.log(`[BotDebug] handleIncomingMessage called: account=${accountId}, chat=${chatId}, text=${(msg.message || '').substring(0, 50)}`);
     const account = db.prepare('SELECT * FROM accounts WHERE id = ? AND is_active = 1').get(accountId) as any;
     if (!account) return;
 
@@ -508,9 +507,9 @@ class TelegramService {
       try {
         const client = this.getClient(accountId);
         if (!client) return;
-        const entity = await client.getEntity(chatId);
+        // Use msg.peerId directly to avoid entity resolution issues
         const replyText = this.processTemplate(rule.reply_text, { name: senderName, senderId, text, keyword: rule.keyword });
-        await client.sendMessage(entity, { message: replyText });
+        await client.sendMessage(msg.peerId, { message: replyText });
 
         // Update match count
         db.prepare('UPDATE auto_replies SET match_count = match_count + 1 WHERE id = ?').run(rule.id);
@@ -606,13 +605,11 @@ class TelegramService {
   }
 
   async setupMessageHandler(client: TelegramClient, accountId: number) {
-    console.log(`[BotDebug] Setting up message handler for account ${accountId}`);
     client.addEventHandler(async (event: any) => {
       // When using NewMessage event builder, the callback receives a NewMessage event object
       // which has a .message property - NOT a className property
       const msg = event.message;
       if (!msg || msg.out) return; // Skip outgoing messages
-      console.log(`[BotDebug] New message event for account ${accountId}: text="${(msg.message || '').substring(0, 50)}"`);
       const chatId = msg.peerId?.channelId?.toString?.() || msg.peerId?.chatId?.toString?.() || msg.peerId?.userId?.toString?.() || '';
       if (chatId) {
         await this.handleIncomingMessage(accountId, chatId, msg);
