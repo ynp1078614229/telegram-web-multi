@@ -51,6 +51,8 @@ class TelegramService {
         } catch (e) { /* ignore */ }
       }
       this.registerClient(account.id, client, userId);
+      // Setup message event handler for bot auto-reply
+      await this.setupMessageHandler(client, account.id);
       console.log(`[Telegram] Account ${account.id} connected`);
     } catch (e: any) {
       console.error(`[Telegram] Failed to connect account ${account.id}:`, e.message);
