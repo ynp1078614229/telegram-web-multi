@@ -123,6 +123,9 @@ cd "${APP_DIR}/backend"
 rm -rf node_modules
 pnpm install --prod=false 2>&1 | tail -5
 
+# pnpm v10 安全策略需要 approve 构建脚本
+pnpm rebuild better-sqlite3 2>&1 | tail -3
+
 log "构建后端 TypeScript..."
 pnpm run build > /dev/null 2>&1
 
