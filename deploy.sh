@@ -122,10 +122,8 @@ log "安装后端依赖..."
 cd "${APP_DIR}/backend"
 rm -rf node_modules
 
-# pnpm v10 安全策略：允许原生模块编译（必须在 install 之前配置）
-echo 'onlyBuiltDependencies[]=better-sqlite3' > .npmrc
-echo 'onlyBuiltDependencies[]=esbuild' >> .npmrc
-
+# 使用 pnpm v9 避免 v10 原生模块编译限制
+npm install -g pnpm@9 > /dev/null 2>&1
 pnpm install --prod=false 2>&1 | tail -5
 
 log "构建后端 TypeScript..."
