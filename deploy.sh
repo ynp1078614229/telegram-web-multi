@@ -235,7 +235,8 @@ server {
 }
 EOF
 
-# 启用站点
+# 启用站点（移除 default 避免冲突）
+rm -f /etc/nginx/sites-enabled/default
 ln -sf /etc/nginx/sites-available/${APP_NAME} /etc/nginx/sites-enabled/${APP_NAME}
 
 # 测试 Nginx 配置
