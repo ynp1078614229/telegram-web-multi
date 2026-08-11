@@ -121,11 +121,12 @@ log "源码部署完成"
 log "安装后端依赖..."
 cd "${APP_DIR}/backend"
 rm -rf node_modules
-pnpm install --prod=false 2>&1 | tail -5
 
-# pnpm v10 安全策略：允许 better-sqlite3 执行原生模块编译
+# pnpm v10 安全策略：允许原生模块编译（必须在 install 之前配置）
 echo 'onlyBuiltDependencies[]=better-sqlite3' > .npmrc
 echo 'onlyBuiltDependencies[]=esbuild' >> .npmrc
+
+pnpm install --prod=false 2>&1 | tail -5
 
 log "构建后端 TypeScript..."
 pnpm run build > /dev/null 2>&1
