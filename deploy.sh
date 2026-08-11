@@ -122,8 +122,10 @@ log "安装后端依赖..."
 cd "${APP_DIR}/backend"
 rm -rf node_modules
 
-# 使用 pnpm v9 避免 v10 原生模块编译限制
+# pnpm v10 不自动编译原生模块(better-sqlite3)，强制使用 v9
 npm install -g pnpm@9 > /dev/null 2>&1
+hash -r  # 刷新 PATH 缓存
+log "pnpm 版本: $(pnpm -v)"
 pnpm install --prod=false 2>&1 | tail -5
 
 log "构建后端 TypeScript..."
