@@ -19,7 +19,7 @@ interface AccountClient {
 
 class TelegramService {
   private clients: Map<number, AccountClient> = new Map();
-  private qrSessions: Map<string, { client: TelegramClient; accountId: number; token?: Buffer }> = new Map();
+  private qrSessions: Map<string, { client: TelegramClient; accountId: number; token?: Buffer; needs2fa?: boolean }> = new Map();
   private wss: any = null;
 
   setWss(wss: any) { this.wss = wss; }
@@ -250,8 +250,48 @@ class TelegramService {
       console.log('[QR] Unexpected result type:', (result as any).className);
       return { status: 'waiting' };
     } catch (e: any) {
-      console.log('[QR] Check error:', e.errorMessage || e.message);
+      const msg = e.errorMessage || e.message || '';
+      console.log('[QR] Check error:', msg);
+      if (msg.includes('SESSION_PASSWORD_NEEDED')) {
+        console.log('[QR] Session needs 2FA password');
+        qrSession.needs2fa = true;
+        return { status: 'need_2fa' };
+      }
       return { status: 'error', error: e.message };
+    }
+  }
+
+
+  async verifyQR2FA(sessionId: string, password: string): Promise<{ status: string; accountId?: number; error?: string }> {
+    const qrSession = this.qrSessions.get(sessionId);
+    if (!qrSession) return { status: 'expired', error: 'Session expired' };
+    try {
+      console.log('[QR-2FA] Verifying password for session:', sessionId);
+      const pwdResult = await qrSession.client.invoke(new Api.account.GetPassword());
+      const inputCheck = await computeCheck(pwdResult as any, password);
+      const result = await qrSession.client.invoke(
+        new Api.auth.CheckPassword({ password: inputCheck as any })
+      );
+      if (result instanceof Api.auth.Authorization) {
+        console.log('[QR-2FA] Password verified!');
+        const me = await qrSession.client.getMe();
+        const userId = this.convertUserId((me as any).id);
+        const sessionString = (qrSession.client.session as any).save();
+        const displayName = (me as any).username || String(userId);
+        db.prepare(`UPDATE accounts SET telegram_user_id = ?, first_name = ?, username = ?, phone = ?, session_string = ?, is_active = 1 WHERE id = ?`)
+          .run(userId, (me as any).firstName || '', (me as any).username || '', displayName, sessionString, qrSession.accountId);
+        this.qrSessions.delete(sessionId);
+        await this.connectAccount({ ...db.prepare('SELECT * FROM accounts WHERE id = ?').get(qrSession.accountId) as any, session_string: sessionString, telegram_user_id: userId });
+        console.log('[QR-2FA] Account connected, id:', qrSession.accountId);
+        return { status: 'success', accountId: qrSession.accountId };
+      }
+      throw new Error('Unexpected 2FA result: ' + (result as any).className);
+    } catch (err: any) {
+      console.log('[QR-2FA] Error:', err.errorMessage || err.message);
+      if (err.errorMessage === 'PASSWORD_HASH_INVALID') {
+        return { status: 'error', error: '密码错误，请重新输入' };
+      }
+      return { status: 'error', error: err.message };
     }
   }
 

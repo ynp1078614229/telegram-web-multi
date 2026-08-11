@@ -84,10 +84,24 @@ export default function DashboardPage() {
           } else if (status.status === 'expired') {
             clearInterval(qrTimerRef.current)
             setQrStatus('expired')
+          } else if (status.status === 'need_2fa') {
+            clearInterval(qrTimerRef.current)
+            setQrStatus('need_2fa')
           }
         } catch (e) { /* ignore */ }
       }, 3000)
     } catch (e: any) { setError(e.message); setQrStatus('') }
+  }
+
+
+  const handleQR2FA = async () => {
+    setError('')
+    try {
+      const res = await api.verifyQR2FA(qrSessionId, twofa)
+      if (res.error) { setError(res.error); return }
+      setQrStatus('success')
+      setTimeout(() => { setShowAddModal(false); resetModal(); loadAccounts() }, 1500)
+    } catch (e: any) { setError(e.message) }
   }
 
   const resetModal = () => {
@@ -233,6 +247,19 @@ export default function DashboardPage() {
                             等待扫码中...
                           </div>
                         </>
+                      )}
+                      {qrStatus === 'need_2fa' && (
+                        <div className="w-full space-y-3">
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-700 text-sm">
+                            ✅ 扫码成功！请输入两步验证密码
+                          </div>
+                          <input type="password" value={twofa} onChange={e => setTwofa(e.target.value)}
+                            placeholder="输入两步验证密码"
+                            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
+                          <button onClick={handleQR2FA} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg transition font-medium">
+                            确认
+                          </button>
+                        </div>
                       )}
                       {qrStatus === 'expired' && (
                         <div className="text-center py-4">

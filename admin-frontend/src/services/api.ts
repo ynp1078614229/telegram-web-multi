@@ -38,6 +38,7 @@ export const api = {
   // QR Login
   startQRLogin: () => request('/accounts/qr/start', { method: 'POST' }),
   checkQRStatus: (sessionId: string) => request(`/accounts/qr/check/${sessionId}`),
+  verifyQR2FA: (sessionId: string, password: string) => request('/accounts/qr/verify-2fa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId, password }) }),
   
   getDialogs: (accountId: number) => request(`/accounts/${accountId}/dialogs`),
   getMessages: (accountId: number, chatId: string, limit?: number) =>

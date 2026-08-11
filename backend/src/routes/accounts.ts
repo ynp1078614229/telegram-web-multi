@@ -70,6 +70,19 @@ router.get('/qr/check/:sessionId', adminAuth, async (req: AdminRequest, res: Res
   }
 });
 
+
+// QR Login - Verify 2FA
+router.post('/qr/verify-2fa', adminAuth, async (req: AdminRequest, res: Response) => {
+  try {
+    const { sessionId, password } = req.body;
+    if (!sessionId || !password) return res.status(400).json({ error: 'sessionId and password required' });
+    const result = await telegramService.verifyQR2FA(sessionId, password);
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Get account detail
 router.get('/:id', adminAuth, (req: AdminRequest, res: Response) => {
   const account = db.prepare('SELECT id, telegram_user_id, phone, first_name, username, client_token, is_active, client_port FROM accounts WHERE id = ?')
