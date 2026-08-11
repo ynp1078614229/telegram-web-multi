@@ -108,7 +108,7 @@ wget -q --show-progress -O telegram-web-multi.tar.gz "${DOWNLOAD_URL}"
 log "解压源码到 ${APP_DIR}..."
 rm -rf "${APP_DIR}"
 mkdir -p "${APP_DIR}"
-tar xzf telegram-web-multi.tar.gz -C "${APP_DIR}"
+tar xzf telegram-web-multi.tar.gz --strip-components=1 -C "${APP_DIR}"
 
 # 清理临时文件
 rm -rf /tmp/telegram-multi-deploy
