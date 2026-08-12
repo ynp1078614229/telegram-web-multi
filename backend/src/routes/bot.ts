@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { adminAuth, AdminRequest } from '../middleware/auth';
 import db from '../db/database';
 
-const router = Router();
+const router: Router = Router();
 
 // ─── Match helpers (shared logic) ───
 export function matchRule(rule: any, text: string): boolean {

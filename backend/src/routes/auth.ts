@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import db from '../db/database';
 import { adminAuth, AdminRequest } from '../middleware/auth';
 
-const router = Router();
+const router: Router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'telegram-multi-admin-secret-2026';
 
 // Admin login

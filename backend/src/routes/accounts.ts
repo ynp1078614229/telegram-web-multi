@@ -3,7 +3,7 @@ import { adminAuth, AdminRequest } from '../middleware/auth';
 import db from '../db/database';
 import telegramService from '../services/telegramService';
 
-const router = Router();
+const router: Router = Router();
 
 // List all accounts
 router.get('/', adminAuth, (req: AdminRequest, res: Response) => {
