@@ -83,6 +83,29 @@ router.post('/qr/verify-2fa', adminAuth, async (req: AdminRequest, res: Response
   }
 });
 
+
+// Get avatar photo (supports token in query for img tags)
+router.get('/avatar/:chatId', async (req: any, res: any) => {
+  try {
+    // Accept token from query string (img tags can't set headers)
+    const token = req.query.token || (req.headers.authorization || '').replace('Bearer ', '');
+    if (!token) return res.status(401).json({ error: 'No token' });
+    const jwt = await import('jsonwebtoken');
+    const secret = process.env.ADMIN_SECRET || 'telegram-multi-admin-secret-2024';
+    try { jwt.default.verify(token, secret); } catch { return res.status(401).json({ error: 'Invalid token' }); }
+
+    const chatId = parseInt(req.params.chatId);
+    const accountId = parseInt(req.query.accountId as string) || chatId;
+    const buffer = await telegramService.getAvatar(accountId, chatId);
+    if (!buffer) return res.status(404).json({ error: 'No avatar' });
+    res.set('Content-Type', 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(buffer);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Get account detail
 router.get('/:id', adminAuth, (req: AdminRequest, res: Response) => {
   const account = db.prepare('SELECT id, telegram_user_id, phone, first_name, username, client_token, is_active, client_port FROM accounts WHERE id = ?')

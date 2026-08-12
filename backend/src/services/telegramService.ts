@@ -295,6 +295,35 @@ class TelegramService {
     }
   }
 
+
+  // Avatar cache
+  private avatarCache: Map<number, { buffer: Buffer; ts: number }> = new Map();
+
+  async getAvatar(accountId: number, chatId?: number): Promise<Buffer | null> {
+    const id = chatId || accountId;
+    const cached = this.avatarCache.get(id);
+    if (cached && Date.now() - cached.ts < 3600000) return cached.buffer;
+    const client = this.getClient(accountId);
+    if (!client) return null;
+    try {
+      const targetId = chatId || accountId;
+      const entity = await client.getEntity(targetId);
+      if (!entity) return null;
+      const photo = (entity as any).photo;
+      if (!photo || photo.className === 'UserProfilePhotoEmpty' || photo.className === 'ChatPhotoEmpty') return null;
+      const raw = await client.downloadProfilePhoto(entity);
+      const buffer = typeof raw === "string" ? Buffer.from(raw) : raw as Buffer;
+      if (buffer && buffer.length > 0) {
+        this.avatarCache.set(id, { buffer, ts: Date.now() });
+        return buffer;
+      }
+      return null;
+    } catch (e: any) {
+      console.log('[Avatar] Error for', id, ':', e.message);
+      return null;
+    }
+  }
+
   async getDialogs(accountId: number): Promise<any[]> {
     const client = this.getClient(accountId);
     if (!client) throw new Error('Account not connected');

@@ -165,8 +165,8 @@ export default function DashboardPage() {
                 onClick={() => navigate(`/account/${acc.id}`)}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-xl text-blue-500 font-medium">
-                      {(acc.first_name || acc.phone || '?')[0].toUpperCase()}
+                    <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-xl text-blue-500 font-medium overflow-hidden">
+                      <span className="absolute" style={{display:'none'}}>{(acc.first_name || acc.phone || '?')[0].toUpperCase()}</span>
                     </div>
                     <div>
                       <div className="font-medium text-gray-800">{acc.first_name || '未登录'}</div>
