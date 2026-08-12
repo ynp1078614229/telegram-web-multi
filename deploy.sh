@@ -214,7 +214,7 @@ log "启动后端服务..."
 pm2 delete ${APP_NAME} 2>/dev/null || true
 
 cd "${APP_DIR}/backend"
-pm2 start dist/index.js \
+pm2 start dist/server.js \
   --name "${APP_NAME}" \
   --env production \
   --max-memory-restart 512M \
