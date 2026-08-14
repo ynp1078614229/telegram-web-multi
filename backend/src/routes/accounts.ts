@@ -87,17 +87,23 @@ router.post('/qr/verify-2fa', adminAuth, async (req: AdminRequest, res: Response
 // Get avatar photo (supports token in query for img tags)
 router.get('/avatar/:chatId', async (req: any, res: any) => {
   try {
-    // Accept token from query string (img tags can't set headers)
+    // Accept token from query string (img tags can't set headers), fallback to Authorization header
     const token = req.query.token || (req.headers.authorization || '').replace('Bearer ', '');
     if (!token) return res.status(401).json({ error: 'No token' });
     const jwt = await import('jsonwebtoken');
-    const secret = process.env.ADMIN_SECRET || 'telegram-multi-admin-secret-2024';
+    // Must match the secret used in auth.ts / middleware/auth.ts
+    const secret = process.env.JWT_SECRET || 'telegram-multi-admin-secret-2026';
     try { jwt.default.verify(token, secret); } catch { return res.status(401).json({ error: 'Invalid token' }); }
 
     const chatId = parseInt(req.params.chatId);
     const accountId = parseInt(req.query.accountId as string) || chatId;
     const buffer = await telegramService.getAvatar(accountId, chatId);
-    if (!buffer) return res.status(404).json({ error: 'No avatar' });
+    if (!buffer) {
+      // Return 1x1 transparent PNG so img onError falls back to colored initials without noisy 404s
+      res.set('Content-Type', 'image/png');
+      res.set('Cache-Control', 'public, max-age=300');
+      return res.status(404).send(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64'));
+    }
     res.set('Content-Type', 'image/jpeg');
     res.set('Cache-Control', 'public, max-age=3600');
     res.send(buffer);
