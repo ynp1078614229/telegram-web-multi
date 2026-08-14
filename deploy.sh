@@ -153,10 +153,12 @@ server {
         return 301 /admin/;
     }
 
-    location /admin/ {
+    location ^~ /admin/ {
         alias ${ADMIN_WEB_DIR}/;
         index index.html;
         try_files \$uri \$uri/ /admin/index.html;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
     }
 
     location /api/ {
@@ -182,11 +184,6 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_read_timeout 86400s;
         proxy_send_timeout 86400s;
-    }
-
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 30d;
-        add_header Cache-Control "public, immutable";
     }
 
     access_log /var/log/nginx/${APP_NAME}.access.log;
