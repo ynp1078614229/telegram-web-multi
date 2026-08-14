@@ -161,6 +161,20 @@ server {
         add_header Cache-Control "public, immutable";
     }
 
+    # 前端使用 /api-multi 前缀，rewrite 为后端 /api/
+    location /api-multi/ {
+        rewrite ^/api-multi/(.*) /api/\$1 break;
+        proxy_pass http://127.0.0.1:${BACKEND_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
     location /api/ {
         proxy_pass http://127.0.0.1:${BACKEND_PORT};
         proxy_http_version 1.1;
