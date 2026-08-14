@@ -327,67 +327,35 @@ class TelegramService {
   async getDialogs(accountId: number): Promise<any[]> {
     const client = this.getClient(accountId);
     if (!client) throw new Error('Account not connected');
+    // getDialogs already returns entity + lastMessage; do NOT call getMessages per dialog,
+    // otherwise 50 concurrent GetHistory requests trigger FloodWait on fresh IPs.
     const dialogs = await client.getDialogs({ limit: 50 });
-    
-    // Fetch last message for each dialog in parallel (batch of 10 to avoid rate limits)
-    const results: any[] = [];
-    const batchSize = 10;
-    for (let i = 0; i < dialogs.length; i += batchSize) {
-      const batch = dialogs.slice(i, i + batchSize);
-      const batchResults = await Promise.all(batch.map(async (d: any) => {
-        let lastMessage = d.lastMessage?.message || '';
-        let lastMessageDate = d.lastMessage?.date || 0;
-        let lastSenderName = '';
-        let chatType = 'private';
-        try {
-          const entity = await client.getEntity(d.id);
-          // Detect chat type from entity
-          if (entity) {
-            const e = entity as any;
-            if (e.className === 'Channel') {
-              chatType = e.broadcast ? 'channel' : 'supergroup';
-            } else if (e.className === 'Chat') {
-              chatType = 'group';
-            }
-          }
-          const msgs = await client.getMessages(entity, { limit: 1 });
-          if (msgs && msgs.length > 0) {
-            const m = msgs[0] as any;
-            lastMessage = m.message || '';
-            lastMessageDate = m.date || 0;
-            // Get sender name for group/supergroup chats
-            if (chatType === 'group' || chatType === 'supergroup') {
-              const senderId = m.senderId?.toString?.() || m.fromId?.userId?.toString?.() || '';
-              if (senderId) {
-                try {
-                  const sender = await client.getEntity(senderId);
-                  if (sender) {
-                    const se = sender as any;
-                    lastSenderName = se.title || [se.firstName, se.lastName].filter(Boolean).join(' ') || se.username || '';
-                  }
-                } catch (e) { /* ignore */ }
-              }
-            }
-          }
-        } catch (e) { /* ignore */ }
 
-        return {
-          id: d.id?.toString?.() || String(d.id),
-          name: d.title || d.name || `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Unknown',
-          lastMessage,
-          lastMessageDate,
-          lastSenderName,
-          unreadCount: d.unreadCount || 0,
-          isGroup: d.isGroup || false,
-          isChannel: d.isChannel || false,
-          isUser: d.isUser || false,
-          chatType,
-        };
-      }));
-      results.push(...batchResults);
-    }
-    
-    // Sort by lastMessageDate descending
+    const detectChatType = (d: any): string => {
+      const e: any = d.entity || d.peer || {};
+      if (e.className === 'Channel' || d.isChannel) {
+        return e.broadcast || d.isBroadcast ? 'channel' : 'supergroup';
+      }
+      if (e.className === 'Chat' || d.isGroup) return 'group';
+      return 'private';
+    };
+
+    const results: any[] = dialogs.map((d: any) => {
+      const lm = d.lastMessage || {};
+      return {
+        id: d.id?.toString?.() || String(d.id),
+        name: d.title || d.name || `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Unknown',
+        lastMessage: lm.message || '',
+        lastMessageDate: lm.date || 0,
+        lastSenderName: '',
+        unreadCount: d.unreadCount || 0,
+        isGroup: d.isGroup || false,
+        isChannel: d.isChannel || false,
+        isUser: d.isUser || false,
+        chatType: detectChatType(d),
+      };
+    });
+
     results.sort((a, b) => b.lastMessageDate - a.lastMessageDate);
     return results;
   }
