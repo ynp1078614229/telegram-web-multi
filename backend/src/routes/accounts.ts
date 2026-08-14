@@ -99,10 +99,11 @@ router.get('/avatar/:chatId', async (req: any, res: any) => {
     const accountId = parseInt(req.query.accountId as string) || chatId;
     const buffer = await telegramService.getAvatar(accountId, chatId);
     if (!buffer) {
-      // Return 1x1 transparent PNG so img onError falls back to colored initials without noisy 404s
-      res.set('Content-Type', 'image/png');
-      res.set('Cache-Control', 'public, max-age=300');
-      return res.status(404).send(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64'));
+      // No avatar: return 404 with empty body so the <img onError> fires
+      // and the UI falls back to colored initials. Do NOT send an image body,
+      // otherwise the browser treats it as a valid image and never triggers onError.
+      res.set('Cache-Control', 'no-store');
+      return res.status(404).end();
     }
     res.set('Content-Type', 'image/jpeg');
     res.set('Cache-Control', 'public, max-age=3600');
